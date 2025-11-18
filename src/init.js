@@ -10,6 +10,7 @@ let config = {
     copen_on_error: true,
     copen_on_run: true,
     copen_on_any: false,
+    notify: vim.notify,
     telescope_borders: {
         prompt: ['─', '│', ' ', '│', '┌', '┐', '│', '│'],
         results: ['─', '│', '─', '│', '├', '┤', '┘', '└'],
@@ -25,7 +26,6 @@ function can_load(module) {
 const async = require("plenary.job");
 
 let progress = null;
-let notify;
 
 let pickers = null;
 let finders;
@@ -47,22 +47,10 @@ if (can_load("fidget")) {
     progress = require("fidget.progress");
 }
 
-if (can_load("notify")) {
-    notify = require("notify");
-} else {
-    notify = function(msg, errlvl, title) {
-        if (errlvl == "error") {
-            new vim.api.nvim_err_writeln(message);
-        } else {
-            new vim.api.nvim_echo([[message, "Normal"]], false, {})
-        }
-    }
-}
-
 let async_worker = null;
 
 function popup(message, errlvl = "info", title = "Info") {
-    notify(message, errlvl, { title: title });
+    config.notify(message, errlvl, { title: title });
 }
 
 function info(message) {
@@ -110,33 +98,11 @@ function get_task_names(lang = "") {
     let tbl = [];
 
     for (let i = 0; i < arr.length; ++i) {
-        let name, langname;
-        let comment = arr[i + 1].split('#')[2];
         let options = arr[i + 1].split('#')[1].split(' ');
         options = new table.filter(options, a => a != "");
         if (options.length == 0) continue;
-        name = options[1];
-        langname = (name.split('_')[1]).lower();
-        if (langname == lang.lower() || lang == "" || langname == "any") {
-            let parts = name.split('_');
-            let out = "";
-            if (parts.length == 1) {
-                out = parts[1];
-            } else {
-                out = `${parts[1]}: `;
-                new table.shift(parts);
-                out = `${out}${new table.concat(parts, ' ')}`;
-            }
-            if (pickers != null) {
-                let width = 34;
-                let repeatNum = new math.max(0, width - out.length);
-                out = `${out}${' '.repeat(repeatNum)} ${comment == null ? "" : comment}`;
-                new table.insert(tbl, [out, name]);
-            } else {
-                new table.insert(tbl, out);
-            }
-            let _null;
-        }
+        new table.insert(tbl, options[1]);
+        let _null;
     }
     return tbl;
 }
@@ -581,7 +547,8 @@ export function setup(opts) {
     config.play_sound = get_bool_option(opts, "play_sound", config.play_sound);
     config.copen_on_error = get_bool_option(opts, "open_qf_on_error", config.copen_on_error);
     config.copen_on_run = get_bool_option(opts, "open_qf_on_run", config.copen_on_run);
-    config.copen_on_any = get_bool_option(opts, "open_qf_on_any", config.copen_on_any)
+    config.copen_on_any = get_bool_option(opts, "open_qf_on_any", config.copen_on_any);
+    config.notify = get_any_option(opts, "notify", config.notify);
     config.telescope_borders.prompt = get_subtable_option(opts, "telescope_borders", "prompt", config.telescope_borders.prompt);
     config.telescope_borders.results = get_subtable_option(opts, "telescope_borders", "results", config.telescope_borders.results);
     config.telescope_borders.preview = get_subtable_option(opts, "telescope_borders", "preview", config.telescope_borders.preview);

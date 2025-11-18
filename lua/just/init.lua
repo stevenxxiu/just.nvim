@@ -7,6 +7,7 @@ local config = {
     copen_on_error = true,
     copen_on_run = true,
     copen_on_any = false,
+    notify = vim.notify,
     telescope_borders = {
         prompt = {"─", "│", " ", "│", "┌", "┐", "│", "│"},
         results = {"─", "│", "─", "│", "├", "┤", "┘", "└"},
@@ -19,7 +20,6 @@ local function can_load(module)
 end
 local async = require("plenary.job")
 local progress = nil
-local notify
 local pickers = nil
 local finders
 local conf
@@ -37,17 +37,6 @@ end
 if can_load("fidget") then
     progress = require("fidget.progress")
 end
-if can_load("notify") then
-    notify = require("notify")
-else
-    notify = function(msg, errlvl, title)
-        if errlvl == "error" then
-            vim.api.nvim_err_writeln(message)
-        else
-            vim.api.nvim_echo({{message, "Normal"}}, false, {})
-        end
-    end
-end
 local async_worker = nil
 local function popup(message, errlvl, title)
     if errlvl == nil then
@@ -56,7 +45,7 @@ local function popup(message, errlvl, title)
     if title == nil then
         title = "Info"
     end
-    notify(message, errlvl, {title = title})
+    config.notify(message, errlvl, {title = title})
 end
 local function info(message)
     popup(message, "info", "Just")
@@ -97,8 +86,6 @@ local function get_task_names(lang)
         local i = 0
         while i < #arr do
             local name
-            local langname
-            local comment = arr[i + 1]:split("#")[2]
             local options = arr[i + 1]:split("#")[1]:split(" ")
             options =
                 table.filter(
@@ -111,41 +98,8 @@ local function get_task_names(lang)
                 goto continue
             end
             name = options[1]
-            langname = name:split("_")[1]:lower()
-            if langname == lang:lower() or lang == "" or langname == "any" then
-                local parts = name:split("_")
-                local out = ""
-                if #parts == 1 then
-                    out = parts[1]
-                else
-                    out = string.format([=[%s: ]=], parts[1])
-                    table.shift(parts)
-                    out = string.format([=[%s%s]=], out, table.concat(parts, " "))
-                end
-                if pickers ~= nil then
-                    local width = 34
-                    local repeatNum = math.max(0, width - #out)
-                    out =
-                        string.format(
-                        [=[%s%s %s]=],
-                        out,
-                        (function()
-                            local __tmp = " "
-                            return __tmp["repeat"](__tmp, repeatNum)
-                        end)(),
-                        (function()
-                            if comment == nil then
-                                return ""
-                            else
-                                return comment
-                            end
-                        end)()
-                    )
-                    table.insert(tbl, {out, name})
-                else
-                    table.insert(tbl, out)
-                end
-                local _null
+            table.insert(tbl, name)
+            local _null
             end
             ::continue::
             (function()
@@ -627,6 +581,7 @@ local function setup(opts)
     config.copen_on_error = get_bool_option(opts, "open_qf_on_error", config.copen_on_error)
     config.copen_on_run = get_bool_option(opts, "open_qf_on_run", config.copen_on_run)
     config.copen_on_any = get_bool_option(opts, "open_qf_on_any", config.copen_on_any)
+    config.notify = get_any_option(opts, "notify", config.notify)
     config.telescope_borders.prompt =
         get_subtable_option(opts, "telescope_borders", "prompt", config.telescope_borders.prompt)
     config.telescope_borders.results =
