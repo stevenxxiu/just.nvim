@@ -443,17 +443,14 @@ local function run_task_name(task_name)
     do
         local i = 0
         while i < #tasks do
-            local opts = tasks[i + 1][2]:split("_")
+            local opts = tasks[i + 1]:split("_")
             if #opts == 1 then
                 if opts[1]:lower() == task_name then
                     task_runner(tasks[i + 1][2])
                     return
                 end
             end
-            (function()
-                i = i + 1
-                return i
-            end)()
+            i = i + 1
         end
     end
     warning("Could not find just task. \nPlease select task from list.")
@@ -587,7 +584,7 @@ local function setup(opts)
     config.telescope_borders.preview =
         get_subtable_option(opts, "telescope_borders", "preview", config.telescope_borders.preview)
     vim.api.nvim_create_user_command("Just", run_task_cmd, {nargs = "?", bang = true, desc = "Run task"})
-    vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
+    -- vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
     vim.api.nvim_create_user_command("JustStop", stop_current_task, {nargs = 0, desc = "Stops current task"})
     vim.api.nvim_create_user_command(
         "JustCreateTemplate",
