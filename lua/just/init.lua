@@ -99,8 +99,6 @@ local function get_task_names(lang)
             end
             name = options[1]
             table.insert(tbl, name)
-            local _null
-            end
             ::continue::
             (function()
                 i = i + 1
