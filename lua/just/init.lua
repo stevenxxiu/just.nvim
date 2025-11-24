@@ -444,9 +444,10 @@ local function run_task_name(task_name)
         local i = 0
         while i < #tasks do
             local opts = tasks[i + 1]:split("_")
+            info(vim.inspect(opts))
             if #opts == 1 then
                 if opts[1]:lower() == task_name then
-                    task_runner(tasks[i + 1][2])
+                    task_runner(tasks[i + 1])
                     return
                 end
             end
