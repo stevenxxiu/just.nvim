@@ -62,6 +62,7 @@ end
 local function get_config_dir()
     return vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":p:h")
 end
+-- returns `string[] names`
 local function get_task_names(lang)
     if lang == nil then
         lang = ""
@@ -151,6 +152,7 @@ local function check_keyword_arg(arg)
     until (false)
     return " "
 end
+-- returns {args = string[], all = bool, fail = bool}
 local function get_task_args(task_name)
     local justfile = string.format([=[%s/justfile]=], vim.fn.getcwd())
     if vim.fn.filereadable(justfile) ~= 1 then
@@ -393,7 +395,7 @@ local function task_select(opts)
                     {
                         results = tasks,
                         entry_maker = function(entry)
-                            return {value = entry, display = entry[1], ordinal = entry[1]}
+                            return {value = entry, display = entry, ordinal = entry}
                         end
                     }
                 ),
@@ -403,7 +405,8 @@ local function task_select(opts)
                         function()
                             actions.close(buf)
                             local selection = action_state.get_selected_entry()
-                            local build_name = selection.value[2]
+                            local build_name = selection.value
+                            -- vim.notify(vim.inspect(selection))
                             task_runner(build_name)
                         end
                     )
@@ -444,7 +447,7 @@ local function run_task_name(task_name)
         local i = 0
         while i < #tasks do
             local opts = tasks[i + 1]:split("_")
-            info(vim.inspect(opts))
+            -- info(vim.inspect(opts))
             if #opts == 1 then
                 if opts[1]:lower() == task_name then
                     task_runner(tasks[i + 1])
@@ -585,7 +588,7 @@ local function setup(opts)
     config.telescope_borders.preview =
         get_subtable_option(opts, "telescope_borders", "preview", config.telescope_borders.preview)
     vim.api.nvim_create_user_command("Just", run_task_cmd, {nargs = "?", bang = true, desc = "Run task"})
-    -- vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
+    vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
     vim.api.nvim_create_user_command("JustStop", stop_current_task, {nargs = 0, desc = "Stops current task"})
     vim.api.nvim_create_user_command(
         "JustCreateTemplate",
