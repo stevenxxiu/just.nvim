@@ -25,10 +25,7 @@ Using [lazy](https://github.com/folke/lazy.nvim)
     "al1-ce/just.nvim",
     dependencies = {
         'nvim-lua/plenary.nvim', -- async jobs
-        'nvim-telescope/telescope.nvim', -- task picker (optional)
-        'rcarriga/nvim-notify', -- general notifications (optional)
         'j-hui/fidget.nvim', -- task progress (optional)
-        'al1-ce/jsfunc.nvim', -- extension library
     },
     config = true
 }
@@ -43,15 +40,10 @@ require("just").setup({
     open_qf_on_error = true, -- opens quickfix when task fails
     open_qf_on_run = true, -- opens quickfix when running `run` task (`:JustRun`)
     open_qf_on_any = false; -- opens quickfix when running any task (overrides other open_qf options)
-    telescope_borders = { -- borders for telescope window
-        prompt = { "─", "│", " ", "│", "┌", "┐", "│", "│" }, 
-        results = { "─", "│", "─", "│", "├", "┤", "┘", "└" },
-        preview = { "─", "│", "─", "│", "┌", "┐", "┘", "└" }
-    }
 })
 ```
 
-### Usage
+## Usage
 You can configure your build tasks with justfile located in your Current Directory. These tasks are local and will be displayed only for this local project.
 
 Any output coming from executing tasks will be directed into *quickfix* and *fidget* and upon completing/failing task the bell will play using `lua/just/build_success.wav` or `lua/just/build_error.wav` accordingly. This can be changed in `lua/just/init.lua` or same file in typescript (preferred, but requires executing TypescriptToLua and executing `tstl -p tsconfig.json`)
@@ -61,9 +53,11 @@ Commands:
 - `JustSelect` - Gives you selection of all tasks in `justfile`.
 - `JustStop` - Stops currently executed task
 - `JustCreateTemplate` - Creates template `justfile` with included "cheatsheet".
-- `JustCreateMakeTemplate` - Creates make-like template `justfile` to allow compiling only changed files.
 
 Only one task can be executed at same time.
+
+### JustSelect notice
+Previously just.nvim was dependant on Telescope, it's not the case anymore. Now to use specific picker look up how to register it as `vim.ui.select` (e.g. `require("fzf-lua").register_ui_select()`)
 
 ## [More info](htts://github.com/al1-ce/just.nvim/blob/master/primer.md)
 
