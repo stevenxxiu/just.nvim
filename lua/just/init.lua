@@ -1,5 +1,3 @@
-local util = require("just.util")
-
 local _M = {}
 
 local config = {
@@ -44,14 +42,14 @@ local function get_task_names(lang)
 
     if vim.fn.filereadable(justfile) == 1 then
         local taskList = vim.fn.system(string.format("just -f %s --list", justfile))
-        local taskArray = util:split(taskList, "\n")
+        local taskArray = taskList:split("\n")
 
-        if vim.startswith(taskArray[1], "error") then
+        if taskArray[1]:starts_with("error") then
             error(taskList)
             return {}
         end
 
-        table.remove(taskArray, 1)
+        table.shift(taskArray)
         arr = taskArray
     else
         error("Justfile not found in project directory")
@@ -61,8 +59,8 @@ local function get_task_names(lang)
     local tbl = {}
     local i = 0
     while i < #arr do
-        local options = util:split(util:split(arr[i + 1], "#")[1], " ")
-        options = vim.tbl_filter(function(a) return a ~= "" end, options)
+        local options = arr[i + 1]:split("#")[1]:split(" ")
+        options = table.filter(options, function(a) return a ~= "" end)
         if #options == 0 then goto continue end
         table.insert(tbl, options[1])
         ::continue::
@@ -84,8 +82,8 @@ local function check_keyword_arg(arg)
     if arg == "DATE"      then return os.date("%d/%m/%Y") end
     if arg == "USDATE"    then return os.date("%m/%d/%Y") end
     if arg == "USERNAME"  then return os.getenv("USER") end
-    if arg == "PCNAME"    then return util:split(vim.fn.system("uname -a"), " ")[2] end
-    if arg == "OS"        then return util:split(vim.fn.system("uname"), "\n")[1] end
+    if arg == "PCNAME"    then return vim.fn.system("uname -a"):split(" ")[2] end
+    if arg == "OS"        then return vim.fn.system("uname"):split("\n")[1] end
     return " "
 end
 
@@ -99,18 +97,18 @@ local function get_task_args(task_name)
 
     local task_info = vim.fn.system(string.format("just -f %s -s %s", justfile, task_name))
 
-    if vim.startswith(task_info, "alias") then
+    if task_info:starts_with("alias") then
         task_info = task_info:sub(task_info:find("\n") + 1)
     end
 
-    if vim:starts_with(task_info, "#") then
+    if task_info:starts_with("#") then
         task_info = task_info:sub(task_info:find("\n") + 1)
     end
 
-    local task_signature = util:split(task_info, ":")[1]
-    local task_args = util:split(task_signature, " ")
+    local task_signature = task_info:split(":")[1]
+    local task_args = task_signature:split(" ")
 
-    table.remove(task_args, 1)
+    table.shift(task_args)
 
     if #task_args == 0 then return {args = {}, all = true, fail = false} end
 
@@ -122,8 +120,8 @@ local function get_task_args(task_name)
 
         if keyword == " " then
             local ask = ""
-            if arg:find("=") ~= nil then
-                local arg_comp = util:split(arg, "=")
+            if arg:contains("=") then
+                local arg_comp = arg:split("=")
                 ask = vim.fn.input(string.format("%s: ", arg_comp[1]), arg_comp[2])
             else
                 ask = vim.fn.input(string.format("%s: ", arg), "")
@@ -191,12 +189,12 @@ local function task_runner(task_name)
         if data == nil then data = "" end
         if data == "" then data = " " end
 
-        data = data:gsub("warning", "Warning", 1)
-        data = data:gsub("info", "Info", 1)
-        data = data:gsub("error", "Error", 1)
-        data = data:gsub("note", "Note", 1)
-        data = data:gsub("'", "''")
-        data = data:gsub("%z", "")
+        data = data:replace("warning", "Warning")
+        data = data:replace("info", "Info")
+        data = data:replace("error", "Error")
+        data = data:replace("note", "Note")
+        data = data:replace_all("'", "''")
+        data = data:replace_all("\0", "")
 
         vim.cmd(string.format("caddexpr '%s'", data))
 
@@ -283,7 +281,7 @@ local function run_task_name(task_name)
     if #tasks == 0 then warning("There are no tasks defined in justfile"); return end
     local i = 0
     while i < #tasks do
-        local opts = util:split(tasks[i + 1], "_")
+        local opts = tasks[i + 1]:split("_")
         -- info(vim.inspect(opts))
         if #opts == 1 then
             if opts[1]:lower() == task_name then
@@ -384,3 +382,4 @@ _M.add_task_template = add_task_template
 _M.setup = setup
 
 return _M
+
