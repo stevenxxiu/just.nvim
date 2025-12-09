@@ -1,3 +1,5 @@
+require("just.deleteme-jsfunc")
+
 local _M = {}
 
 local config = {
