@@ -4,11 +4,12 @@ local _M = {}
 
 local config = {
     message_limit = 32,
-    play_sound = false,
     copen_on_error = true,
     copen_on_run = true,
     copen_on_any = false,
     notify = vim.notify,
+    on_done_callbacks = {},
+    on_fail_callbacks = {},
 }
 
 local function can_load(module) local ok, _ = pcall(require, module); return ok end
@@ -237,23 +238,26 @@ local function task_runner(task_name)
                     if ret == 0 then
                         if handle ~= nil then handle.message = "Finished"; handle:finish() end
                         status = "Finished"
+                        for _, func in pairs(config.on_done_callbacks) do
+                            if func ~= nil and type(func) == "function" then
+                                func()
+                            end
+                        end
                     else
                         if handle ~= nil then handle.message = "Failed"; handle:finish() end
                         if config.copen_on_error then vim.cmd("copen"); vim.cmd("wincmd p") end
                         status = "Failed"
+                        for _, func in pairs(config.on_fail_callbacks) do
+                            if func ~= nil and type(func) == "function" then
+                                func()
+                            end
+                        end
                     end
                 end
 
                 vim.fn.setqflist( { {text = ""}, {text = string.format("%s in %s seconds", status, string.format("%.2f", end_time))} }, "a")
                 vim.cmd("cbottom")
 
-                if config.play_sound then
-                    if ret == 0 then
-                        async:new( { command = "aplay", args = {string.format("%s/build_success.wav", get_config_dir()), "-q"} }) :start()
-                    else
-                        async:new( { command = "aplay", args = {string.format("%s/build_error.wav", get_config_dir()), "-q"} }) :start()
-                    end
-                end
                 async_worker = nil
             end, 50)
         end,
@@ -328,6 +332,14 @@ local function add_task_template()
     info("Template justfile created")
 end
 
+local function add_callback_on_done(callback)
+    table.insert(config.on_done_callbacks, callback)
+end
+
+local function add_callback_on_fail(callback)
+    table.insert(config.on_fail_callbacks, callback)
+end
+
 local function table_to_dict(tbl)
     local out = {}
     for key, value, __ in pairs(tbl) do out[key] = value end
@@ -360,20 +372,14 @@ end
 local function setup(opts)
     opts = table_to_dict(opts)
     config.message_limit = get_any_option(opts, "fidget_message_limit", config.message_limit)
-    config.play_sound = get_bool_option(opts, "play_sound", config.play_sound)
     config.copen_on_error = get_bool_option(opts, "open_qf_on_error", config.copen_on_error)
-    config.copen_on_run = get_bool_option(opts, "open_qf_on_run", config.copen_on_run)
-    config.copen_on_any = get_bool_option(opts, "open_qf_on_any", config.copen_on_any)
+    config.copen_on_run   = get_bool_option(opts, "open_qf_on_run", config.copen_on_run)
+    config.copen_on_any   = get_bool_option(opts, "open_qf_on_any", config.copen_on_any)
     config.notify = get_any_option(opts, "notify", config.notify)
     vim.api.nvim_create_user_command("Just", run_task_cmd, {nargs = "?", bang = true, desc = "Run task"})
     vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
     vim.api.nvim_create_user_command("JustStop", stop_current_task, {nargs = 0, desc = "Stops current task"})
     vim.api.nvim_create_user_command( "JustCreateTemplate", add_task_template, {nargs = 0, desc = "Creates template for just"})
-
-    if config.play_sound and vim.fn.executable("aplay") ~= 1 then
-        config.play_sound = false
-        error("Failed to find 'aplay' binary on system. Disabling just.nvim play_sound")
-    end
 end
 
 _M.task_select = task_select
@@ -381,6 +387,8 @@ _M.run_task_select = run_task_select
 _M.run_task_name = run_task_name
 _M.stop_current_task = stop_current_task
 _M.add_task_template = add_task_template
+_M.add_callback_on_done = add_callback_on_done
+_M.add_callback_on_fail = add_callback_on_fail
 _M.setup = setup
 
 return _M
