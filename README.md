@@ -99,7 +99,6 @@ I've removed option to play sound in favor of using your own callbacks and doing
 ```lua
 -- Example of replicating old behavior
 -- async:new creates non-blocking system process
--- as if you called :!aplay ...
 local just = require("just")
 local async = require("plenary.job")
 just.add_callback_on_fail(function()
@@ -135,5 +134,5 @@ end)
 
 ## Misc
 
-A quick primer on [just.nvim flavor](htts://github.com/nxuv/just.nvim/blob/master/primer.md) of just (most important part is argument keywords).
+A quick primer on [just.nvim flavor](https://github.com/nxuv/just.nvim/blob/master/primer.md) of just (most important part is argument keywords).
 
