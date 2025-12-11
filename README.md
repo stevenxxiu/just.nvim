@@ -25,10 +25,10 @@ Using [lazy](https://github.com/folke/lazy.nvim) (as example)
 ```
 
 ## Configuration
-Default config is:
+Default config is
 ```lua
 require("just").setup({
-    fidget_message_limit = 32, -- limit for length of fidget progress message 
+    fidget_message_limit = 32, -- limit for length of fidget progress message
     open_qf_on_error = true,   -- opens quickfix when task fails
     open_qf_on_run = true,     -- opens quickfix when running `run` task (`:JustRun`)
     open_qf_on_any = false;    -- opens quickfix when running any task (overrides other open_qf options)
@@ -40,6 +40,7 @@ require("just").setup({
 ## API
 ```lua
 local just = require("just")
+
 --- Runs vim.ui.select on list of tasks defined in justfile
 just.run_task_select()
 
@@ -50,8 +51,8 @@ just.run_task_name(task_name)
 --- Force stops currently running task
 just.stop_current_task()
 
---- Creates minimal justfile containing shebang,
---- link to just's reference manual and default task
+--- Creates minimal justfile that contains shebang,
+--- a link to just's reference manual and a default task
 just.add_task_template()
 
 --- Adds callback that will be called on
@@ -71,61 +72,66 @@ just.setup(options)
 
 ## Commands:
 - `Just` - If 0 args supplied runs `default` task, if 1 arg supplied runs task passes as that arg. If ran with bang (`!`) then stops currently running task before executing new one.
-- `JustSelect` - Gives you selection of all tasks in `justfile`.
+- `JustSelect` - Gives you selection of all tasks in `justfile` (optionally see [picker support](#Telescope)).
 - `JustStop` - Stops currently running task.
 - `JustCreateTemplate` - Creates template `justfile`.
 
-IMPORTANT - only one task can be executed at same time.
+> **IMPORTANT** - only one task can be executed at same time.
 
 ## Old features notice
 
 ### Telescope
-Previously just.nvim was dependant on Telescope, it's not the case anymore. Now to use specific picker look up how to register it as `vim.ui.select` (e.g. `require("fzf-lua").register_ui_select()`).
+Previously just.nvim was dependant on Telescope, it's not the case anymore. Now to use specific picker you need look up how to register it as `vim.ui.select` (with three most common ones listed here).
 
-FzfLua setup:
+- Fzf-Lua setup:
 ```lua
 local fzf = require("fzf-lua")
 fzf.setup({ --[[ your setup ]] })
 fzf.register_ui_select()
 ```
-
-For Telescope use [telescope-ui-select.nvim](https://github.com/nvim-telescope/telescope-ui-select.nvim) instead.
-
-Mini.Pick will automatically register itself as your ui select method.
-
-For everything else see [how to register my plugin as ui select](https://www.google.com/search?q=nvim+register+PLUGIN+as+vim.ui.select&udm=14).
+- Telescope requires to use [telescope-ui-select.nvim](https://github.com/nvim-telescope/telescope-ui-select.nvim) instead.
+- Mini.Pick automatically registers itself as your ui select method after setup.
+- For everything else see [how to register my plugin as ui select](https://www.google.com/search?q=nvim+register+PLUGIN+as+vim.ui.select&udm=14).
 
 ### Completion Jingle
 I've removed option to play sound in favor of using your own callbacks and doing whatever you would want with them, including playing sounds on completion or failure of the task.
 
 ```lua
 -- Example of replicating old behavior
+-- async:new creates non-blocking system process
+-- as if you called :!aplay ...
 local just = require("just")
 local async = require("plenary.job")
 just.add_callback_on_fail(function()
-    async:new( { command = "aplay", args = {"/home/user/music/fail_sound.wav", "-q"} }):start()
+    async:new({
+        command = "aplay",
+        args = {"/home/user/music/fail_sound.wav", "-q"}
+    }):start()
 end)
 just.add_callback_on_done(function()
-    async:new( { command = "aplay", args = {"/home/user/music/done_sound.wav", "-q"} }):start()
+    async:new({
+        command = "aplay",
+        args = {"/home/user/music/done_sound.wav", "-q"}
+    }):start()
 end)
 ```
 
 ## Screenshots
-Example just file (default JustCreateTemplate with added build task)
+- Example just file (*old* default JustCreateTemplate with added build task)
 
-![example](readme/just-file.png)
+<img src="readme/just-file.png" width=50%>
 
-Fidget hint
+- Fidget hint
 
-![example](readme/just-fidget.png)
+<img src="readme/just-fidget.png" width=50%>
 
-Output of `:Just build`
+- Output of `:Just build` in quickfix
 
-![example](readme/just-qf.png)
+<img src="readme/just-qf.png" width=50%>
 
-`:JustSelect`
+- `:JustSelect` using telescope
 
-![example](readme/just-select.png)
+<img src="readme/just-select.png" width=50%>
 
 ## Misc
 
