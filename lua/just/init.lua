@@ -1,12 +1,20 @@
-local util = require("just.util")
-
+---@diagnostic disable: undefined-global, undefined-doc-param
 local _M = {}
+
+local function split_string(s, delimiter)
+    local res = {}
+    for part in string.gmatch(s, "([^"..delimiter.."]+)") do
+        table.insert(res, part)
+    end
+    return res
+end
 
 local config = {
     message_limit = 32,
     copen_on_error = true,
     copen_on_run = true,
     copen_on_any = false,
+    register_commands = true,
     notify = vim.notify,
     on_done_callbacks = {},
     on_fail_callbacks = {},
@@ -32,10 +40,6 @@ local function error(message) popup(message, "error", "Just") end
 local function warning(message) popup(message, "warning", "Just") end
 -- local function inspect(val) print(vim.inspect(val)) end
 
-local function get_config_dir()
-    return vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":p:h")
-end
-
 -- returns `string[] names`
 local function get_task_names(lang)
     if lang == nil then lang = "" end
@@ -45,7 +49,7 @@ local function get_task_names(lang)
 
     if vim.fn.filereadable(justfile) == 1 then
         local taskList = vim.fn.system(string.format("just -f %s --list", justfile))
-        local taskArray = util:split(taskList, "\n")
+        local taskArray = split_string(taskList, "\n")
 
         if vim.startswith(taskArray[1], "error") then
             error(taskList)
@@ -62,7 +66,7 @@ local function get_task_names(lang)
     local tbl = {}
     local i = 0
     while i < #arr do
-        local options = util:split(util:split(arr[i + 1], "#")[1], " ")
+        local options = split_string(split_string(arr[i + 1], "#")[1], " ")
         options = vim.tbl_filter(function(a) return a ~= "" end, options)
         if #options == 0 then goto continue end
         table.insert(tbl, options[1])
@@ -85,8 +89,8 @@ local function check_keyword_arg(arg)
     if arg == "DATE"      then return os.date("%d/%m/%Y") end
     if arg == "USDATE"    then return os.date("%m/%d/%Y") end
     if arg == "USERNAME"  then return os.getenv("USER") end
-    if arg == "PCNAME"    then return util:split(vim.fn.system("uname -a"), " ")[2] end
-    if arg == "OS"        then return util:split(vim.fn.system("uname"), "\n")[1] end
+    if arg == "PCNAME"    then return split_string(vim.fn.system("uname -a"), " ")[2] end
+    if arg == "OS"        then return split_string(vim.fn.system("uname"), "\n")[1] end
     return " "
 end
 
@@ -108,8 +112,8 @@ local function get_task_args(task_name)
         task_info = task_info:sub(task_info:find("\n") + 1)
     end
 
-    local task_signature = util:split(task_info, ":")[1]
-    local task_args = util:split(task_signature, " ")
+    local task_signature = split_string(task_info, ":")[1]
+    local task_args = split_string(task_signature, " ")
 
     table.remove(task_args, 1)
 
@@ -124,7 +128,7 @@ local function get_task_args(task_name)
         if keyword == " " then
             local ask = ""
             if arg:find("=") ~= nil then
-                local arg_comp = util:split(arg, "=")
+                local arg_comp = split_string(arg, "=")
                 ask = vim.fn.input(string.format("%s: ", arg_comp[1]), arg_comp[2])
             else
                 ask = vim.fn.input(string.format("%s: ", arg), "")
@@ -208,11 +212,11 @@ local function task_runner(task_name)
         if handle ~= nil then handle.message = data end
     end
 
-    local on_stdout_func = function(err, data)
+    local on_stdout_func = function(_, data)
         vim.schedule( function() return append_qf_data(data) end )
     end
 
-    local on_stderr_func = function(err, data)
+    local on_stderr_func = function(_, data)
         vim.schedule( function() return append_qf_data(data) end )
     end
 
@@ -227,7 +231,7 @@ local function task_runner(task_name)
         env = vim.fn.environ(),
         cwd = vim.fn.getcwd(),
 
-        on_exit = function(j, ret)
+        on_exit = function(_, ret)
             local end_time = os.clock() - start_time
             vim.defer_fn( function()
                 local status = ""
@@ -269,8 +273,7 @@ local function task_runner(task_name)
     if async_worker ~= nil then async_worker:start() end
 end
 
-local function task_select(opts)
-    if opts == nil then opts = {} end
+local function task_select()
     local tasks = get_task_names()
     if #tasks == 0 then return end
     vim.ui.select(tasks, {prompt = "Select task: "}, function(choice) task_runner(choice) end)
@@ -287,7 +290,7 @@ local function run_task_name(task_name)
     if #tasks == 0 then warning("There are no tasks defined in justfile"); return end
     local i = 0
     while i < #tasks do
-        local opts = util:split(tasks[i + 1], "_")
+        local opts = split_string(tasks[i + 1], "_")
         -- info(vim.inspect(opts))
         if #opts == 1 then
             if opts[1]:lower() == task_name then
@@ -322,7 +325,8 @@ local function add_task_template()
         if opt ~= 1 then return end
     end
     local f = io.open(justfile, "w")
-    f:write([=[#!/usr/bin/env -S just --justfile%s
+    if f == nil then error("Unable to write '" .. justfile .. "'"); return end
+    f:write([=[#!/usr/bin/env -S just --justfile
 # just reference  : https://just.systems/man/en/
 
 @default:
@@ -342,7 +346,7 @@ end
 
 local function table_to_dict(tbl)
     local out = {}
-    for key, value, __ in pairs(tbl) do out[key] = value end
+    for key, value, _ in pairs(tbl) do out[key] = value end
     return out
 end
 
@@ -375,20 +379,36 @@ local function setup(opts)
     config.copen_on_error = get_bool_option(opts, "open_qf_on_error", config.copen_on_error)
     config.copen_on_run   = get_bool_option(opts, "open_qf_on_run", config.copen_on_run)
     config.copen_on_any   = get_bool_option(opts, "open_qf_on_any", config.copen_on_any)
+    config.register_commands = get_bool_option(opts, "register_commands", config.register_commands)
     config.notify = get_any_option(opts, "notify", config.notify)
-    vim.api.nvim_create_user_command("Just", run_task_cmd, {nargs = "?", bang = true, desc = "Run task"})
-    vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
-    vim.api.nvim_create_user_command("JustStop", stop_current_task, {nargs = 0, desc = "Stops current task"})
-    vim.api.nvim_create_user_command( "JustCreateTemplate", add_task_template, {nargs = 0, desc = "Creates template for just"})
+    if config.register_commands then
+        vim.api.nvim_create_user_command("Just", run_task_cmd, {nargs = "?", bang = true, desc = "Run task"})
+        vim.api.nvim_create_user_command("JustSelect", run_task_select, {nargs = 0, desc = "Open task picker"})
+        vim.api.nvim_create_user_command("JustStop", stop_current_task, {nargs = 0, desc = "Stops current task"})
+        vim.api.nvim_create_user_command( "JustCreateTemplate", add_task_template, {nargs = 0, desc = "Creates template for just"})
+    end
 end
 
-_M.task_select = task_select
+--- Runs vim.ui.select on list of tasks defined in justfile
 _M.run_task_select = run_task_select
+--- Runs specified task in defined
+--- @param task_name string
 _M.run_task_name = run_task_name
+--- Force stops currently running task
 _M.stop_current_task = stop_current_task
+--- Creates minimal justfile containing shebang,
+--- link to just's reference manual and default task
 _M.add_task_template = add_task_template
+--- Adds callback that will be called on
+--- successful (return code is 0) completion of task
+--- @param callback function
 _M.add_callback_on_done = add_callback_on_done
+--- Adds callback that will be called on
+--- task failure (return code is not 0)
+--- @param callback function
 _M.add_callback_on_fail = add_callback_on_fail
+--- Applies user config and optionally (by default) creates user commands
+--- @param opts table
 _M.setup = setup
 
 return _M
