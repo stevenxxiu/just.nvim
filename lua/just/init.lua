@@ -30,7 +30,7 @@ end
 local function find_justfile()
     local files = scandir(vim.fn.getcwd())
     for _, f in ipairs(files) do
-        if string.match(f, "[Jj][Uu][Ss][Tt][Ff][Ii][Ll][Ee]") then return f end
+        if string.match(f, "^%.?[Jj][Uu][Ss][Tt][Ff][Ii][Ll][Ee]$") then return f end
     end
 end
 
