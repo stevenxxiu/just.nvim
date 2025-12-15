@@ -9,6 +9,31 @@ local function split_string(s, delimiter)
     return res
 end
 
+--- Create a flat list of all files in a directory
+local function scandir(directory)
+    local command = "ls " .. directory .. " -A1 --color=never"
+    if not vim.fn.has("win32") then
+        command = "dir " .. directory .. " /b"
+    end
+    local fileList = {}
+
+    local cmdout = vim.fn.system(command)
+    local files = split_string(cmdout, "\n")
+
+    for _, fileName in ipairs(files) do
+        table.insert(fileList, fileName)
+    end
+
+    return fileList
+end
+
+local function find_justfile()
+    local files = scandir(vim.fn.getcwd())
+    for _, f in ipairs(files) do
+        if string.match(f, "[Jj][Uu][Ss][Tt][Ff][Ii][Ll][Ee]") then return f end
+    end
+end
+
 local config = {
     message_limit = 32,
     copen_on_error = true,
@@ -45,7 +70,7 @@ local function get_task_names(lang)
     if lang == nil then lang = "" end
 
     local arr = {}
-    local justfile = string.format("%s/justfile", vim.fn.getcwd())
+    local justfile = string.format("%s/%s", vim.fn.getcwd(), find_justfile())
 
     if vim.fn.filereadable(justfile) == 1 then
         local taskList = vim.fn.system(string.format("just -f %s --list", justfile))
@@ -96,7 +121,7 @@ end
 
 -- returns {args = string[], all = bool, fail = bool}
 local function get_task_args(task_name)
-    local justfile = string.format("%s/justfile", vim.fn.getcwd())
+    local justfile = string.format("%s/%s", vim.fn.getcwd(), find_justfile())
 
     if vim.fn.filereadable(justfile) ~= 1 then
         error("Justfile not found in project directory")
@@ -163,7 +188,7 @@ local function task_runner(task_name)
 
     local args = arg_obj.args
 
-    local justfile = string.format("%s/justfile", vim.fn.getcwd())
+    local justfile = string.format("%s/%s", vim.fn.getcwd(), find_justfile())
 
     if vim.fn.filereadable(justfile) ~= 1 then
         error("Justfile not found in project directory")
@@ -319,7 +344,7 @@ local function run_task_cmd(args)
 end
 
 local function add_task_template()
-    local justfile = string.format("%s/justfile", vim.fn.getcwd())
+    local justfile = string.format("%s/%s", vim.fn.getcwd(), find_justfile())
     if vim.fn.filereadable(justfile) == 1 then
         local opt = vim.fn.confirm("Justfile already exists in this project, create anyway?", "&Yes\n&No", 2)
         if opt ~= 1 then return end
