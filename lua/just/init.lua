@@ -11,13 +11,14 @@ end
 
 --- Create a flat list of all files in a directory
 local function scandir(directory)
-    local command = "ls " .. directory .. " -A1 --color=never"
+    ---@type string[]
+    local command = { "ls", directory, "-A1", "--color=never" }
     if not vim.fn.has("win32") then
-        command = "dir " .. directory .. " /b"
+        command = { "dir", directory, "/b" }
     end
     local fileList = {}
 
-    local cmdout = vim.fn.system(command)
+    local cmdout = vim.system(command, { text = true }):wait().stdout
     local files = split_string(cmdout, "\n")
 
     for _, fileName in ipairs(files) do
